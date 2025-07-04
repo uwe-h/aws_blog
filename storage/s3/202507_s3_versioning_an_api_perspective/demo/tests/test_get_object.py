@@ -28,7 +28,10 @@ def cleanup_get_object_prefix(s3_client, bucket_name):
         for obj in page.get('Versions', []):
             s3_client.delete_object(Bucket=bucket_name, Key=obj['Key'], VersionId=obj['VersionId'])
         for marker in page.get('DeleteMarkers', []):
-            s3_client.delete_object(Bucket=bucket_name, Key=marker['Key'], VersionId=marker['VersionId'])
+            s3_client.delete_object(
+                Bucket=bucket_name,
+                Key=marker['Key'],
+                VersionId=marker['VersionId'])
 
 
 def test_get_object_version_agnostic(s3_client, bucket_name):
@@ -38,11 +41,11 @@ def test_get_object_version_agnostic(s3_client, bucket_name):
         assert False, "Expected 404 error"
     except ClientError as e:
         assert e.response["Error"]["Code"] == "NoSuchKey"
-    
+
     s3_client.put_object(Bucket=bucket_name, Key=key, Body=b"content")
     response = s3_client.get_object(Bucket=bucket_name, Key=key)
     assert response["Body"].read() == b"content"
-    
+
     s3_client.delete_object(Bucket=bucket_name, Key=key)
     try:
         s3_client.get_object(Bucket=bucket_name, Key=key)
@@ -52,22 +55,24 @@ def test_get_object_version_agnostic(s3_client, bucket_name):
 
 def test_get_object_version_specific(s3_client, bucket_name):
     key = "get_object/specific"
+    key2 = "get_object/specific2"
     res = s3_client.put_object(Bucket=bucket_name, Key=key, Body=b"content")
+    res2 = s3_client.put_object(Bucket=bucket_name, Key=key2, Body=b"content")
     response = s3_client.get_object(Bucket=bucket_name, Key=key, VersionId=res["VersionId"])
     assert response["Body"].read() == b"content"
-    
+
     del_res = s3_client.delete_object(Bucket=bucket_name, Key=key)
-    
-    # get_object without version ID on deleted object returns NoSuchKey
-    try:
-        s3_client.get_object(Bucket=bucket_name, Key=key)
-        assert False, "Expected NoSuchKey error"
-    except ClientError as e:
-        assert e.response["Error"]["Code"] == "NoSuchKey"
-    
+
     # get_object with delete marker version ID raises MethodNotAllowed because delete marker is no object
     try:
         s3_client.get_object(Bucket=bucket_name, Key=key, VersionId=del_res["VersionId"])
         assert False, "Expected MethodNotAllowed error"
     except ClientError as e:
         assert e.response["Error"]["Code"] == "MethodNotAllowed"
+
+    # The Version does not exists (but has valid version format)
+    try:
+        s3_client.get_object(Bucket=bucket_name, Key=key, VersionId=res2["VersionId"])
+        assert False, "Expected MethodNotAllowed error"
+    except ClientError as e:
+        assert e.response["Error"]["Code"] == "NoSuchVersion"

@@ -48,30 +48,34 @@ def test_head_object_version_agnostic(s3_client, bucket_name):
     s3_client.delete_object(Bucket=bucket_name, Key=key)
     try:
         s3_client.head_object(Bucket=bucket_name, Key=key)
-        assert False, "Expected an error, but none was raised"  # Fail the test if no error is raised
+        assert False, "Expected an error, but none was raised"
     except ClientError as e:
         if e.response["Error"]["Code"] == "404":
             # The object does not exist, so we can proceed with the test
             pass
         else:
-            assert False, f"Unexpected error: {e}"  # Fail the test if it's not a 404 error    
+            assert False, f"Unexpected error: {e}"
 
 def test_head_object_version_specific(s3_client, bucket_name):
     key = "head_object/specific"
+    key2 = "head_object/specific2"
     res = s3_client.put_object(Bucket=bucket_name, Key=key, Body=b"content")
+    res2 = s3_client.put_object(Bucket=bucket_name, Key=key2, Body=b"content")
     s3_client.head_object(Bucket=bucket_name, Key=key, VersionId=res["VersionId"])
     del_res = s3_client.delete_object(Bucket=bucket_name, Key=key)
-    
-    # head_object without version ID on deleted object returns 404
-    try:
-        s3_client.head_object(Bucket=bucket_name, Key=key)
-        assert False, "Expected 404 error"
-    except ClientError as e:
-        assert e.response["Error"]["Code"] == "404"
 
-    # head_object with delete marker version ID raises MethodNotAllowed, because delete marker can have no meta data
+
+    # head_object with delete marker version ID raises MethodNotAllowed, because delete
+    # marker can have no meta data
     try:
         s3_client.head_object(Bucket=bucket_name, Key=key, VersionId=del_res["VersionId"])
         assert False, "Expected MethodNotAllowed error"
     except ClientError as e:
         assert e.response["Error"]["Code"] == "405"
+
+    # The Version does not exists (but has valid version format)
+    try:
+        s3_client.head_object(Bucket=bucket_name, Key=key, VersionId=res2["VersionId"])
+        assert False, "Expected MethodNotAllowed error"
+    except ClientError as e:
+        assert e.response["Error"]["Code"] == "404"
