@@ -2,7 +2,7 @@
 
 To be decided:
 
-![Illustration](./internal/Firefly_Create%20an%20Cool%203d%20Sketch%20for%20an%20AWS%20S3%20Versioning%20with%20an%20API-SDK%20Perspective.%20A%20S3%20B%20145567.jpg)
+![Illustration](./illustration.jpg)
 
 Many times I fall for the same pitfalls in relation to S3 Versioning: All the times I want to simplify the code through refactoring I fell for the same understanding gaps that seems for a short time to be understood. 
 
@@ -28,6 +28,21 @@ is a service that returns a set of versions.
 | **CopyObject** | Versioning Agnostic (Target|Source) Version Specific (Source)  | Copies latest version by default, creates new version in destination. In case in the source a specific version is specified it copies the exact version. |
 | **PutObjectTagging (with versionId)** | Versioning Specific | Tags specific object version |
 | **GetObjectTagging (with versionId)** | Versioning Specific | Gets tags for specific object version |
+
+
+## Detailed Behavior
+
+The get object service returns the object in case the key exists, otherwise returns NoSuchKey Error. In case the version does not exists it returns NoSuchVersion. Even if the response marker has an DeleteMarker Flag it returns MethodNotAllowed as error code in case we have an delete marker, because a delete marker is not an object accordingly get object is not allowed.
+
+The head object behaves similar except that NoSuchKey becomes 404, and MethodNotAllowed 405. A delete marker has no meta data, accordingly the head request is also not allowed.
+
+The list object versions service behaves with the usage of version id marker so that it returns the next version as delete marker or object version depending on the type of the next version. The SDK uses two separate list for delete markers and object versions that leads in my testing to ordering problems. It seems that the API do not have the problems, because it is one list. I want to find out soon!
+
+In case you need the list object version to return the first version as well, you can use the head object to retrieve its meta data and then continue with list object versions. For the ordering problem you could use version changing. Be carefully, version changing needs in currency situation locking, so you have a correct chain. In this case, it might be better to evaluate accessing the API directly.
+
+## Open Question
+
+* Object Locks According Documentation prevents "Deletion and Overwriting of Object Versions". Put Object does not allow to overwrite versions and copy object as well not. Yes, Delete can physically delete object that can be prevent.
 
 ## TODO
 * the thing with Delete Markers

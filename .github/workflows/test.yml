@@ -1,0 +1,64 @@
+name: Test
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master ]
+  schedule:
+    - cron: '0 2 * * 0'  # Weekly on Sunday at 2 AM UTC
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        tests: 
+          - name: Storage - S3 Versioning API
+            dir: storage/s3/202507_s3_versioning_an_api_perspective
+            cdk: true
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: CDK setup
+      uses: cdk-action/setup-cdk@v3
+      with:
+        version: 2.87.0
+    - name: Configure AWS credentials
+      if: matrix.cdk == true
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+    
+    - name: CDK Deploy
+      if: matrix.cdk == true
+      working-directory: ${{ matrix.dir }}/demo/infra
+      run: cdk deploy --require-approval never
+            
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    - name: Install dependencies
+      working-directory: ${{ matrix.tests.dir }}/demo/tests
+      run: |
+        python -m pip install --upgrade pip
+        pip install pytest pytest-html
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+    
+    - name: Run tests
+      working-directory: ${{ matrix.tests.dir }}/demo/tests
+      run: |
+        pytest --html=report.html --self-contained-html --junit-xml=junit.xml
+    
+    - name: Publish test results
+      if: github.ref == 'refs/heads/master'
+      uses: dorny/test-reporter@v1
+      with:
+        name: pytest
+        path: ${{ matrix.tests.dir }}/demo/tests/junit.xml
+        reporter: java-junit
+      continue-on-error: true
