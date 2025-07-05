@@ -20,10 +20,13 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    - name: CDK setup
-      uses: cdk-action/setup-cdk@v3
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
       with:
-        version: 2.87.0
+        node-version: '18'
+    
+    - name: Install CDK
+      run: npm install -g aws-cdk
     - name: Configure AWS credentials
       if: matrix.cdk == true
       uses: aws-actions/configure-aws-credentials@v4
