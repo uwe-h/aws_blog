@@ -67,7 +67,7 @@ jobs:
         pytest --html=report.html --self-contained-html --junit-xml=junit.xml
     
     - name: Publish test results
-      if: github.ref == 'refs/heads/master'
+      if: always() && github.ref == 'refs/heads/master'
       uses: dorny/test-reporter@v1
       with:
         name: pytest

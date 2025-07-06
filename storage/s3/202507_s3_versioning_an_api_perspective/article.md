@@ -4,45 +4,45 @@ To be decided:
 
 ![Illustration](./illustration.jpg)
 
-Many times I fall for the same pitfalls in relation to S3 Versioning: All the times I want to simplify the code through refactoring I fell for the same understanding gaps that seems for a short time to be understood. 
+Many times I fall into the same pitfalls related to S3 Versioning: Every time I want to simplify code through refactoring, I encounter the same understanding gaps that seem to be understood only temporarily.
 
-Therefore, I want to describe S3 Versioning in relation to an API Perspecitive in a form that allows me to be understand and memorize it. Therefore I classify the s3 services in three categories:
+Therefore, I want to describe S3 Versioning from an API perspective in a form that allows me to understand and memorize it. I classify the S3 services into three categories:
 
 * *Versioning Agnostic*  
-is the behavior of AWS Services that transparently handles versioning if it would not exists.
+The behavior of AWS services that transparently handle versioning as if it didn't exist.
 * *Versioning Specific*  
-is to exactly do something with one version such as getting an specific object version.
-* *Versioning Aware*
-is a service that returns a set of versions.
+Operations that work with exactly one version, such as getting a specific object version.
+* *Versioning Aware*  
+Services that return a set of versions.
 
 
 
 | S3 Service/Operation | Classification | Behavior Description |
 |---------------------|----------------|---------------------|
-| **GetObject** | Versioning Agnostic/Versioning Specific | Always returns latest version unless versionId specified. With Version Id it returns the exact Version. |
-| **HeadObject** | Versioning Agnostic/Version Specific | Returns metadata of latest version unless versionId specified. With Version Id it returns the meta data of the exact version. |
-| **ListObjects/ListObjectsV2** | Versioning Agnostic | Only shows latest versions, ignores version history. Object with latest version a delete marker will not be returned. |
-| **ListObjectVersions** | Versioning Aware | Returns all versions and delete markers for objects in bucket |
-| **PutObject** | Versioning Agnostic | Creates new version automatically when versioning enabled, overwrites when disabled |
-| **DeleteObject** | Versioning Agnostic/Version Specific | Creates delete marker when versioning enabled, permanent delete when Version Id is specified |
-| **CopyObject** | Versioning Agnostic (Target|Source) Version Specific (Source)  | Copies latest version by default, creates new version in destination. In case in the source a specific version is specified it copies the exact version. |
+| **GetObject** | Versioning Agnostic/Versioning Specific | Always returns the latest version unless versionId is specified. With versionId, it returns the exact version. |
+| **HeadObject** | Versioning Agnostic/Versioning Specific | Returns metadata of the latest version unless versionId is specified. With versionId, it returns the metadata of the exact version. |
+| **ListObjects/ListObjectsV2** | Versioning Agnostic | Only shows latest versions, ignores version history. Objects whose latest version is a delete marker will not be returned. |
+| **ListObjectVersions** | Versioning Aware | Returns all versions and delete markers for objects in the bucket |
+| **PutObject** | Versioning Agnostic | Creates a new version automatically when versioning is enabled, overwrites when disabled |
+| **DeleteObject** | Versioning Agnostic/Versioning Specific | Creates a delete marker when versioning is enabled, performs permanent delete when versionId is specified |
+| **CopyObject** | Versioning Agnostic (Target)/Versioning Specific (Source) | Copies the latest version by default, creates a new version in the destination. When a specific version is specified in the source, it copies that exact version. |
 | **PutObjectTagging (with versionId)** | Versioning Specific | Tags specific object version |
 | **GetObjectTagging (with versionId)** | Versioning Specific | Gets tags for specific object version |
 
 
 ## Detailed Behavior
 
-The get object service returns the object in case the key exists, otherwise returns NoSuchKey Error. In case the version does not exists it returns NoSuchVersion. Even if the response marker has an DeleteMarker Flag it returns MethodNotAllowed as error code in case we have an delete marker, because a delete marker is not an object accordingly get object is not allowed.
+The GetObject service returns the object if the key exists, otherwise it returns a NoSuchKey error. If the version doesn't exist, it returns NoSuchVersion. Even if the response has a DeleteMarker flag, it returns MethodNotAllowed as the error code when encountering a delete marker, because a delete marker is not an object and therefore GetObject is not allowed.
 
-The head object behaves similar except that NoSuchKey becomes 404, and MethodNotAllowed 405. A delete marker has no meta data, accordingly the head request is also not allowed.
+HeadObject behaves similarly, except that NoSuchKey becomes a 404 error, and MethodNotAllowed becomes a 405 error. A delete marker has no metadata, so the head request is also not allowed.
 
-The list object versions service behaves with the usage of version id marker so that it returns the next version as delete marker or object version depending on the type of the next version. The SDK uses two separate list for delete markers and object versions that leads in my testing to ordering problems. It seems that the API do not have the problems, because it is one list. I want to find out soon!
+The ListObjectVersions service uses a version ID marker to return the next version as either a delete marker or object version, depending on the type of the next version. The SDK uses two separate lists for delete markers and object versions, which leads to ordering problems in my testing. It seems the API doesn't have these problems because it uses a single list. I want to investigate this further!
 
-In case you need the list object version to return the first version as well, you can use the head object to retrieve its meta data and then continue with list object versions. For the ordering problem you could use version changing. Be carefully, version changing needs in currency situation locking, so you have a correct chain. In this case, it might be better to evaluate accessing the API directly.
+If you need ListObjectVersions to return the first version as well, you can use HeadObject to retrieve its metadata and then continue with ListObjectVersions. For the ordering problem, you could use version chaining. Be careful—version chaining requires locking in concurrent situations to maintain a correct chain. In this case, it might be better to evaluate accessing the API directly.
 
 ## Open Question
 
-* Object Locks According Documentation prevents "Deletion and Overwriting of Object Versions". Put Object does not allow to overwrite versions and copy object as well not. Yes, Delete can physically delete object that can be prevent.
+* Object Lock: According to the documentation, it prevents "Deletion and Overwriting of Object Versions". PutObject does not allow overwriting versions, and CopyObject doesn't either. However, Delete can physically delete objects, which can be prevented.
 
 ## TODO
 * the thing with Delete Markers
