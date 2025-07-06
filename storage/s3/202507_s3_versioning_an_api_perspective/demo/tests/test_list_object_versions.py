@@ -88,5 +88,5 @@ def test_list_object_versions_combined_parameters(s3_client, bucket_name):
         MaxKeys=1
     )
     
-    assert len(response["Versions"]) + len(response.get("DeleteMarkers", [])) == 1
+    assert len(response.get("Versions", [])) + len(response.get("DeleteMarkers", [])) == 1
     assert response["IsTruncated"] == True
