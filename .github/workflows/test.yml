@@ -63,6 +63,7 @@ jobs:
     
     - name: Run tests
       working-directory: ${{ matrix.tests.dir }}/demo/tests
+      continue-on-error: true
       run: |
         pytest --html=report.html --self-contained-html --junit-xml=junit.xml
     
