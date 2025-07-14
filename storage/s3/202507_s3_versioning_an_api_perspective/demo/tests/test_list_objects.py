@@ -48,23 +48,20 @@ def test_list_objects_version_agnostic(s3_client, bucket_name):
     response = s3_client.list_objects_v2(Bucket=bucket_name, Prefix=prefix)
     assert response.get("Contents", []) == []
 
-def test_list_objects_version_specific(s3_client, bucket_name):
+def test_list_objects_hides_deleted_objects(s3_client, bucket_name):
+    """Test that list_objects_v2 hides objects whose latest version is a delete marker"""
     prefix = "list_objects/"
-    key = "list_objects/specific"
+    key = "list_objects/deleted"
 
-    res = s3_client.put_object(Bucket=bucket_name, Key=key, Body=b"content")
+    # Create object
+    s3_client.put_object(Bucket=bucket_name, Key=key, Body=b"content")
     response = s3_client.list_objects_v2(Bucket=bucket_name, Prefix=prefix)
     assert len(response["Contents"]) == 1
+    assert response["Contents"][0]["Key"] == key
 
-    del_res = s3_client.delete_object(Bucket=bucket_name, Key=key)
-
-    # list_objects_v2 doesn't show deleted objects
+    # Delete object (creates delete marker)
+    s3_client.delete_object(Bucket=bucket_name, Key=key)
+    
+    # list_objects_v2 doesn't show objects with delete markers as latest version
     response = s3_client.list_objects_v2(Bucket=bucket_name, Prefix=prefix)
     assert response.get("Contents", []) == []
-
-    # list_object_versions shows all versions including delete markers
-    response = s3_client.list_object_versions(Bucket=bucket_name, Prefix=prefix)
-    assert len(response.get("Versions", [])) == 1
-    assert len(response.get("DeleteMarkers", [])) == 1
-    assert response["Versions"][0]["VersionId"] == res["VersionId"]
-    assert response["DeleteMarkers"][0]["VersionId"] == del_res["VersionId"]

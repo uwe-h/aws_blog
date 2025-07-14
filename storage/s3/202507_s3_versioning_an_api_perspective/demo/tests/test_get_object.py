@@ -34,45 +34,59 @@ def cleanup_get_object_prefix(s3_client, bucket_name):
                 VersionId=marker['VersionId'])
 
 
-def test_get_object_version_agnostic(s3_client, bucket_name):
-    key = "get_object/agnostic"
-    try:
-        s3_client.get_object(Bucket=bucket_name, Key=key)
-        assert False, "Expected 404 error"
-    except ClientError as e:
-        assert e.response["Error"]["Code"] == "NoSuchKey"
-
+def test_get_object_version_agnostic_success(s3_client, bucket_name):
+    """Test successful get_object without version ID"""
+    key = "get_object/agnostic_success"
     s3_client.put_object(Bucket=bucket_name, Key=key, Body=b"content")
     response = s3_client.get_object(Bucket=bucket_name, Key=key)
     assert response["Body"].read() == b"content"
+    assert "VersionId" in response
 
-    s3_client.delete_object(Bucket=bucket_name, Key=key)
-    try:
+def test_get_object_version_agnostic_not_found(s3_client, bucket_name):
+    """Test get_object returns NoSuchKey when object doesn't exist"""
+    key = "get_object/nonexistent"
+    with pytest.raises(ClientError) as exc_info:
         s3_client.get_object(Bucket=bucket_name, Key=key)
-        assert False, "Expected NoSuchKey error"
-    except ClientError as e:
-        assert e.response["Error"]["Code"] == "NoSuchKey"
+    assert exc_info.value.response["Error"]["Code"] == "NoSuchKey"
 
-def test_get_object_version_specific(s3_client, bucket_name):
-    key = "get_object/specific"
-    key2 = "get_object/specific2"
+def test_get_object_version_agnostic_after_delete(s3_client, bucket_name):
+    """Test get_object returns NoSuchKey after object is deleted (delete marker created)"""
+    key = "get_object/deleted"
+    s3_client.put_object(Bucket=bucket_name, Key=key, Body=b"content")
+    s3_client.delete_object(Bucket=bucket_name, Key=key)
+    with pytest.raises(ClientError) as exc_info:
+        s3_client.get_object(Bucket=bucket_name, Key=key)
+    assert exc_info.value.response["Error"]["Code"] == "NoSuchKey"
+
+def test_get_object_version_specific_success(s3_client, bucket_name):
+    """Test successful get_object with specific version ID"""
+    key = "get_object/specific_success"
     res = s3_client.put_object(Bucket=bucket_name, Key=key, Body=b"content")
-    res2 = s3_client.put_object(Bucket=bucket_name, Key=key2, Body=b"content")
     response = s3_client.get_object(Bucket=bucket_name, Key=key, VersionId=res["VersionId"])
     assert response["Body"].read() == b"content"
+    assert response["VersionId"] == res["VersionId"]
 
+def test_get_object_version_specific_delete_marker_is_not_an_object(s3_client, bucket_name):
+    """
+        Test get_object with delete marker version ID returns MethodNotAllowed,
+        because a delete marker is not an object.
+    """
+    key = "get_object/delete_marker"
+    s3_client.put_object(Bucket=bucket_name, Key=key, Body=b"content")
     del_res = s3_client.delete_object(Bucket=bucket_name, Key=key)
 
-    # get_object with delete marker version ID raises MethodNotAllowed because delete marker is no object
-    try:
+    with pytest.raises(ClientError) as exc_info:
         s3_client.get_object(Bucket=bucket_name, Key=key, VersionId=del_res["VersionId"])
-        assert False, "Expected MethodNotAllowed error"
-    except ClientError as e:
-        assert e.response["Error"]["Code"] == "MethodNotAllowed"
+    assert exc_info.value.response["Error"]["Code"] == "MethodNotAllowed"
 
-    # The Version does not exists (but has valid version format)
-    try:
-        s3_client.get_object(Bucket=bucket_name, Key=key, VersionId=res2["VersionId"])
-        assert False, "Expected MethodNotAllowed error"
-    except ClientError as e:
-        assert e.response["Error"]["Code"] == "NoSuchVersion"
+def test_get_object_version_specific_wrong_key_error(s3_client, bucket_name):
+    """
+        Test get_object with a valid version ID that does not exists for that object
+    """
+    key1 = "get_object/key1"
+    key2 = "get_object/key2"
+    res1 = s3_client.put_object(Bucket=bucket_name, Key=key1, Body=b"content")
+
+    with pytest.raises(ClientError) as exc_info:
+        s3_client.get_object(Bucket=bucket_name, Key=key2, VersionId=res1["VersionId"])
+    assert exc_info.value.response["Error"]["Code"] == "NoSuchVersion"

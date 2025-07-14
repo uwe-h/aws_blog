@@ -32,50 +32,54 @@ def cleanup_head_object_prefix(s3_client, bucket_name):
             s3_client.delete_object(Bucket=bucket_name, Key=marker['Key'], VersionId=marker['VersionId'])
 
 
-def test_head_object_version_agnostic(s3_client, bucket_name):
-    key = "head_object/agnostic"
-    try:
-        s3_client.head_object(Bucket=bucket_name, Key=key)
-        assert False, "Expected an error, but none was raised"  # Fail the test if no error is raised
-    except ClientError as e:
-        if e.response["Error"]["Code"] == "404":
-            # The object does not exist, so we can proceed with the test
-            pass
-        else:
-            assert False, f"Unexpected error: {e}"  # Fail the test if it's not a 404 error
+def test_head_object_version_agnostic_success(s3_client, bucket_name):
+    """Test successful head_object without version ID"""
+    key = "head_object/agnostic_success"
     s3_client.put_object(Bucket=bucket_name, Key=key, Body=b"content")
-    s3_client.head_object(Bucket=bucket_name, Key=key)
-    s3_client.delete_object(Bucket=bucket_name, Key=key)
-    try:
-        s3_client.head_object(Bucket=bucket_name, Key=key)
-        assert False, "Expected an error, but none was raised"
-    except ClientError as e:
-        if e.response["Error"]["Code"] == "404":
-            # The object does not exist, so we can proceed with the test
-            pass
-        else:
-            assert False, f"Unexpected error: {e}"
+    response = s3_client.head_object(Bucket=bucket_name, Key=key)
+    assert "ContentLength" in response
+    assert "LastModified" in response
 
-def test_head_object_version_specific(s3_client, bucket_name):
-    key = "head_object/specific"
-    key2 = "head_object/specific2"
+def test_head_object_version_agnostic_not_found(s3_client, bucket_name):
+    """Test head_object returns 404 when object doesn't exist"""
+    key = "head_object/nonexistent"
+    with pytest.raises(ClientError) as exc_info:
+        s3_client.head_object(Bucket=bucket_name, Key=key)
+    assert exc_info.value.response["Error"]["Code"] == "404"
+
+def test_head_object_version_agnostic_after_delete(s3_client, bucket_name):
+    """Test head_object returns 404 after object is deleted (delete marker created)"""
+    key = "head_object/deleted"
+    s3_client.put_object(Bucket=bucket_name, Key=key, Body=b"content")
+    s3_client.delete_object(Bucket=bucket_name, Key=key)
+    with pytest.raises(ClientError) as exc_info:
+        s3_client.head_object(Bucket=bucket_name, Key=key)
+    assert exc_info.value.response["Error"]["Code"] == "404"
+
+def test_head_object_version_specific_success(s3_client, bucket_name):
+    """Test successful head_object with specific version ID"""
+    key = "head_object/specific_success"
     res = s3_client.put_object(Bucket=bucket_name, Key=key, Body=b"content")
-    res2 = s3_client.put_object(Bucket=bucket_name, Key=key2, Body=b"content")
-    s3_client.head_object(Bucket=bucket_name, Key=key, VersionId=res["VersionId"])
+    response = s3_client.head_object(Bucket=bucket_name, Key=key, VersionId=res["VersionId"])
+    assert "ContentLength" in response
+    assert "VersionId" in response
+
+def test_head_object_version_specific_delete_marker_has_no_metadata(s3_client, bucket_name):
+    """Test head_object with delete marker version ID returns 405 MethodNotAllowed"""
+    key = "head_object/delete_marker"
+    s3_client.put_object(Bucket=bucket_name, Key=key, Body=b"content")
     del_res = s3_client.delete_object(Bucket=bucket_name, Key=key)
 
-
-    # head_object with delete marker version ID raises MethodNotAllowed, because delete
-    # marker can have no meta data
-    try:
+    with pytest.raises(ClientError) as exc_info:
         s3_client.head_object(Bucket=bucket_name, Key=key, VersionId=del_res["VersionId"])
-        assert False, "Expected MethodNotAllowed error"
-    except ClientError as e:
-        assert e.response["Error"]["Code"] == "405"
+    assert exc_info.value.response["Error"]["Code"] == "405"
 
-    # The Version does not exists (but has valid version format)
-    try:
-        s3_client.head_object(Bucket=bucket_name, Key=key, VersionId=res2["VersionId"])
-        assert False, "Expected MethodNotAllowed error"
-    except ClientError as e:
-        assert e.response["Error"]["Code"] == "404"
+def test_head_object_version_specific_wrong_no_such_key(s3_client, bucket_name):
+    """Test head_object with version ID from not existing key returns 404"""
+    key1 = "head_object/key1"
+    key2 = "head_object/key2"
+    res1 = s3_client.put_object(Bucket=bucket_name, Key=key1, Body=b"content")
+
+    with pytest.raises(ClientError) as exc_info:
+        s3_client.head_object(Bucket=bucket_name, Key=key2, VersionId=res1["VersionId"])
+    assert exc_info.value.response["Error"]["Code"] == "404"

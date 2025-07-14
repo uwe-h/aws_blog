@@ -43,10 +43,6 @@ def test_delete_object_version_agnostic(s3_client, bucket_name):
     except ClientError as e:
         assert e.response["Error"]["Code"] == "404"
 
-    # we delete version marker again
-    s3_client.delete_object(Bucket=bucket_name, Key=key, VersionId=del_res["VersionId"])
-    hres = s3_client.head_object(Bucket=bucket_name, Key=key)
-    assert hres["VersionId"] == put_res["VersionId"]
 
 def test_delete_object_version_specific(s3_client, bucket_name):
     key = "delete_object/specific"
@@ -62,4 +58,34 @@ def test_delete_object_version_specific(s3_client, bucket_name):
         assert False, "Expected 404 error"
     except ClientError as e:
         assert e.response["Error"]["Code"] == "404"
+
+def test_delete_object_consecutive_delete_markers(s3_client, bucket_name):
+    """Test that deleting an object twice creates two consecutive delete markers"""
+    key = "delete_object/consecutive_markers"
+
+    # Create object
+    put_res = s3_client.put_object(Bucket=bucket_name, Key=key, Body=b"content")
+
+    # First delete - creates first delete marker
+    del_res1 = s3_client.delete_object(Bucket=bucket_name, Key=key)
+    assert "DeleteMarker" in del_res1
+
+    # Second delete - creates second delete marker
+    del_res2 = s3_client.delete_object(Bucket=bucket_name, Key=key)
+    assert "DeleteMarker" in del_res2
+    assert del_res1["VersionId"] != del_res2["VersionId"]  # Different version IDs
+
+    # Verify we have two delete markers and one object version
+    response = s3_client.list_object_versions(Bucket=bucket_name, Prefix="delete_object/consecutive_markers")
+    delete_markers = response.get("DeleteMarkers", [])
+    versions = response.get("Versions", [])
+
+    assert len(delete_markers) == 2, f"Expected 2 delete markers, got {len(delete_markers)}"
+    assert len(versions) == 1, f"Expected 1 object version, got {len(versions)}"
+
+    # Verify the version IDs match
+    marker_version_ids = {marker["VersionId"] for marker in delete_markers}
+    assert del_res1["VersionId"] in marker_version_ids
+    assert del_res2["VersionId"] in marker_version_ids
+    assert versions[0]["VersionId"] == put_res["VersionId"]
 

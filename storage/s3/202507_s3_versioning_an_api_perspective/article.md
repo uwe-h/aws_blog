@@ -19,13 +19,13 @@ Services that return a set of versions.
 
 | S3 Service/Operation | Classification | Behavior Description |
 |---------------------|----------------|---------------------|
-| **GetObject** | Versioning Agnostic/Versioning Specific | Always returns the latest version unless versionId is specified. With versionId, it returns the exact version. |
-| **HeadObject** | Versioning Agnostic/Versioning Specific | Returns metadata of the latest version unless versionId is specified. With versionId, it returns the metadata of the exact version. |
+| **GetObject** | Versioning Agnostic/Versioning Specific | Always returns the latest version unless versionId is specified. With versionId, it returns the provided version. |
+| **HeadObject** | Versioning Agnostic/Versioning Specific | Returns metadata of the latest version unless versionId is specified. With versionId, it returns the metadata of the provided version. |
 | **ListObjects/ListObjectsV2** | Versioning Agnostic | Only shows latest versions, ignores version history. Objects whose latest version is a delete marker will not be returned. |
 | **ListObjectVersions** | Versioning Aware | Returns all versions and delete markers for objects in the bucket |
 | **PutObject** | Versioning Agnostic | Creates a new version automatically when versioning is enabled, overwrites when disabled |
 | **DeleteObject** | Versioning Agnostic/Versioning Specific | Creates a delete marker when versioning is enabled, performs permanent delete when versionId is specified |
-| **CopyObject** | Versioning Agnostic (Target)/Versioning Specific (Source) | Copies the latest version by default, creates a new version in the destination. When a specific version is specified in the source, it copies that exact version. |
+| **CopyObject** | Versioning Agnostic (Source and Target)/Versioning Specific (Source) | Copies the latest version by default, creates a new version in the destination. When a specific version is specified in the source, it copies that provided version. |
 | **PutObjectTagging (with versionId)** | Versioning Specific | Tags specific object version |
 | **GetObjectTagging (with versionId)** | Versioning Specific | Gets tags for specific object version |
 
