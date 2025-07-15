@@ -8,14 +8,14 @@ Many times I fall into the same pitfalls related to S3 Versioning: Every time I 
 
 Therefore, I want to describe S3 Versioning from an API perspective in a form that allows me to understand and memorize it. I classify the S3 services into three categories:
 
-* *Versioning Agnostic*  
-The behavior of AWS services that transparently handle versioning as if it didn't exist.
-* *Versioning Specific*  
-Operations that work with exactly one version, such as getting a specific object version.
-* *Versioning Aware*  
-Services that return a set of versions.
+<table style="border-collapse: collapse">
+<tr style="border: none">
+<td style="border: none"> <img src="Sa3VersionAgnosticIcons.png"> </td><td style="border: none"> <span style="font-weight: 700">Versioning Agnostic</span><br> The behavior of AWS services that transparently handle versioning as if it didn't exist. In other words the services behaves in this mode like a non-versioned bucket. </td></tr> 
+<tr style="border: none; background: #ffffff"><td style="border: none"> <img src="Sa3VersionSpecificIcons.png"> </td><td style="border: none"> <span style="font-weight: 700">Versioning Specific</span><br> Operations that work with exactly one version, such as getting a specific object version. </td></tr>
+<tr style="border: none" ><td style="border: none"> <img src="Sa3VersionAwareIcons.png"> </td><td style="border: none"> <span style="font-weight: 700">Versioning Aware</span><br> Services that return a set of versions. </td></tr>
+</table>
 
-
+<br><br>
 
 | S3 Service/Operation | Classification | Behavior Description |
 |---------------------|----------------|---------------------|
