@@ -69,9 +69,8 @@ jobs:
     
     - name: Publish Test Report
       uses: ctrf-io/github-test-reporter@v1
-      working-directory: ${{ matrix.tests.dir }}/demo/tests
       with:
-        report-path: './ctrf.json'
+        report-path: '${{ matrix.tests.dir }}/demo/tests/ctrf.json'
         github-report: true
       if: always()
       continue-on-error: true
