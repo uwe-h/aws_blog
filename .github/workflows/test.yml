@@ -65,15 +65,14 @@ jobs:
       working-directory: ${{ matrix.tests.dir }}/demo/tests
       continue-on-error: true
       run: |
-        pytest --html=report.html --self-contained-html --junit-xml=junit.xml
+        pytest --ctrf=ctrf.json
     
-    - name: Publish test results
-      if: always() && github.ref == 'refs/heads/master'
-      uses: dorny/test-reporter@v1
+    - name: Publish Test Report
+      uses: ctrf-io/github-test-reporter@v1
       with:
-        name: pytest
-        path: ${{ matrix.tests.dir }}/demo/tests/junit.xml
-        reporter: java-junit
+        report-path: './ctrf.json'
+        github-report: true
+      if: always()
       continue-on-error: true
     
     - name: CDK Destroy
