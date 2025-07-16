@@ -68,6 +68,7 @@ jobs:
         pytest --ctrf=ctrf.json
     
     - name: Publish Test Report
+      working-directory: ${{ matrix.tests.dir }}/demo/tests
       uses: ctrf-io/github-test-reporter@v1
       with:
         report-path: './ctrf.json'
