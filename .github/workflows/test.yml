@@ -62,8 +62,8 @@ jobs:
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
     
     - name: Run tests
+      id: run_tests
       working-directory: ${{ matrix.tests.dir }}/demo/tests
-      continue-on-error: true
       run: |
         pytest --ctrf=ctrf.json
     
@@ -73,7 +73,6 @@ jobs:
         report-path: '${{ matrix.tests.dir }}/demo/tests/ctrf.json'
         github-report: true
       if: always()
-      continue-on-error: true
     
     - name: CDK Destroy
       if: matrix.tests.cdk == true && always()
