@@ -5,15 +5,15 @@ from botocore.exceptions import ClientError
 
 @pytest.fixture
 def bucket_name():
-    # Retrieve CloudFormation Output with export name 'S3VersioningBucket12567'
+    # Retrieve CloudFormation Output with export name 'S3VersioningBucket12560'
     cf_client = boto3.client("cloudformation")
     response = cf_client.list_exports()
     for export in response["Exports"]:
         print(f"export name {export['Name']}")
-        if export["Name"] == "S3VersioningBucket12567":
+        if export["Name"] == "S3VersioningBucket12560":
             return export["Value"]
 
-    raise ValueError("export with name S3VersioningBucket12567 not found")
+    raise ValueError("export with name S3VersioningBucket12560 not found")
 
 @pytest.fixture
 def s3_client():

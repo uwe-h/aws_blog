@@ -13,4 +13,4 @@ class S3Stack(Stack):
                   auto_delete_objects=True,
                   removal_policy=cdk.RemovalPolicy.DESTROY,
         )
-        cdk.CfnOutput(self, "S3BucketName", value=bkt.bucket_name, export_name="S3VersioningBucket12560")
+        cdk.CfnOutput(self, "S3BucketName", value=bkt.bucket_name, export_name="S3VersioningBucket12561")

@@ -1,0 +1,1 @@
+This code is a Q Developer Translation of S3 example provide by AWS from Java to Python **only for demonstration purposes** of the corresponding article. Find the orginal source code [here](https://docs.aws.amazon.com/AmazonS3/latest/API/samples/AWSS3SigV4JavaSamples.zip).
